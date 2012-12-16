@@ -10,22 +10,91 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Numbers.Log where
+module Numbers.Log (
+      Loggable(..)
+    , sbuild
 
+    , infoL
+    , infoL'
+    , errorL
+    , errorL'
+    , logL
+    , logL'
+
+    , defaultLogger
+    , newLogger
+    ) where
+
+import Blaze.ByteString.Builder
 import Control.Monad
-import Numbers.Types
+import Data.List
+import Data.Monoid
+import Numeric                  (showFFloat)
 import System.Log.FastLogger
 import System.IO
 import System.IO.Unsafe
 
+import qualified Data.ByteString.Char8 as BS
+import qualified Data.Vector           as V
+
+
+class Loggable a where
+    build :: Loggable a => a -> Builder
+    (&&&) :: (Loggable a, Loggable b) => a -> b -> Builder
+    (<&&) :: Loggable a => String -> a -> Builder
+    (&&>) :: Loggable a => a -> String -> Builder
+
+    infixr 7 &&&
+    infixr 9 <&&
+    infixr 8 &&>
+
+    a &&& b = build a <> build b
+    a <&& b = sbuild a &&& b
+    a &&> b = a &&& sbuild b
+
+sbuild :: String -> Builder
+sbuild = build . BS.pack
+
+instance Loggable Builder where
+    build = id
+
+instance Loggable BS.ByteString where
+    build = copyByteString
+
+instance Loggable Int where
+    build = sbuild . show
+
+instance Loggable Double where
+    build n = sbuild $ showFFloat (Just 1) n ""
+
+instance Loggable a => Loggable (Maybe a) where
+    build (Just x) = build x
+    build Nothing  = mempty
+
+instance Loggable a => Loggable [a] where
+    build = mconcat . intersperse (sbuild ", ") . map build
+
+instance Loggable (V.Vector Double) where
+    build = build . V.toList
+
+
 infoL :: Loggable a => a -> IO ()
 infoL = errorL
+
+infoL' :: String -> IO ()
+infoL' = infoL . sbuild
 
 errorL :: Loggable a => a -> IO ()
 errorL = logL defaultLogger
 
+errorL' :: String -> IO ()
+errorL' = errorL . sbuild
+
 logL :: Loggable a => Logger -> a -> IO ()
 logL logger s = loggerPutBuilder logger $ s &&> "\n"
+
+logL' :: Logger -> String -> IO ()
+logL' logger s = logL logger (sbuild s)
 
 defaultLogger :: Logger
 defaultLogger = unsafePerformIO $ mkLogger True stdout

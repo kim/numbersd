@@ -29,20 +29,20 @@ main = withSocketsDo $ do
     conf@Config{..} <- parseConfig
 
     buf <- atomically $ newTBQueue _buffer
-    infoL "Buffering..."
+    infoL' "Buffering..."
 
     ls  <- mapM (asyncLink . (`sourceUri` buf)) _listeners
-    infoL "Listeners started..."
+    infoL' "Listeners started..."
 
     ss  <- sequence $
         catMaybes [sinkHttp conf, sinkLog _logEvents]
         ++ map (newSink (graphite _prefix)) _graphites
         ++ map (newSink broadcast) _broadcasts
         ++ map (newSink downstream) _downstreams
-    infoL "Sinks started..."
+    infoL' "Sinks started..."
 
     sto <- asyncLink $ runStore _percentiles _interval ss buf
-    infoL "Store started..."
+    infoL' "Store started..."
 
     void . waitAnyCancel $ sto:ls
 

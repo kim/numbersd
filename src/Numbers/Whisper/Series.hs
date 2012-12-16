@@ -37,7 +37,9 @@ module Numbers.Whisper.Series (
 import Data.Aeson
 import Data.List
 import Data.Maybe
+import Data.Monoid
 import Data.Tuple    (swap)
+import Numbers.Log
 import Numbers.Types
 
 type Resolution = Int
@@ -94,8 +96,14 @@ instance Loggable Interval where
     build (I i) = build i
 
 instance Loggable Series where
-    build s@SS{..} = start s &&& "," <&& end &&& "," <&& step &&& "|"
-      <&& intersperse (sbuild ",") (map (maybe (build noneStr) build) $ values s)
+    build s@SS{..} = start s &&& "," <&& end  &&& "," <&& step &&& "|"
+                    <&& values' (values s)
+
+        where
+            values' vs = mconcat $
+                intersperse (sbuild ",")
+                            (map (maybe (sbuild noneStr) build) $ vs)
+
 
 noneStr :: String
 noneStr = "None"

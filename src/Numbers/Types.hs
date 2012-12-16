@@ -11,12 +11,8 @@
 --
 
 module Numbers.Types (
-    -- * Type Classes
-      Loggable(..)
-    , sbuild
-
     -- * Exported Types
-    , Time(..)
+      Time(..)
     , Uri(..)
     , Key(..)
     , Metric(..)
@@ -44,7 +40,7 @@ import Data.Maybe
 import Data.Monoid
 import Data.String
 import Data.Time.Clock.POSIX
-import Numeric                           (showFFloat)
+import Numbers.Log
 import Statistics.Function               (sort)
 import Statistics.Sample
 import Text.Regex.PCRE            hiding (match)
@@ -55,67 +51,12 @@ import qualified Data.Set              as S
 import qualified Data.Text.Encoding    as TE
 import qualified Data.Vector           as V
 
-class Loggable a where
-    build :: Loggable a => a -> Builder
-    (&&&) :: (Loggable a, Loggable b) => a -> b -> Builder
-    (<&&) :: Loggable a => String -> a -> Builder
-    (&&>) :: Loggable a => a -> String -> Builder
-
-    infixr 7 &&&
-    infixr 9 <&&
-    infixr 8 &&>
-
-    a &&& b = build a <> build b
-    a <&& b = build a &&& b
-    a &&> b = a &&& build b
-
-sbuild :: String -> Builder
-sbuild = build . BS.pack
-
-instance Loggable Builder where
-    build = id
-
-instance Loggable [Builder] where
-    build = mconcat
-
-instance Loggable BS.ByteString where
-    build = copyByteString
-
-instance Loggable Int where
-    build = build . show
-
-instance Loggable Double where
-    build n = build $ showFFloat (Just 1) n ""
-
-instance Loggable String where
-    build = build . BS.pack
-
-instance Loggable [String] where
-    build = build . intercalate ", "
-
-instance Loggable a => Loggable (Maybe a) where
-    build (Just x) = build x
-    build Nothing  = mempty
-
--- Investigate how to avoid overlapping instances for
--- instance Loggable a => Loggable [a] delcaration
-
-instance Loggable [Int] where
-    build = build . show
-
-instance Loggable [Double] where
-    build = build . show
-
--- ^
-
-instance Loggable (V.Vector Double) where
-    build = build . V.toList
 
 newtype Time = Time Int
     deriving (Eq, Ord, Show, Enum, Num, Real, Integral)
 
 instance Loggable Time where
-    build (Time n) = build $ show n
+    build (Time n) = build n
 
 currentTime :: IO Time
 currentTime = (Time . truncate) `liftM` getPOSIXTime
@@ -141,9 +82,6 @@ instance Loggable Uri where
     build (File f)  = "file://" <&& f
     build (Tcp h p) = "tcp://"  <&& h &&& ":" <&& p
     build (Udp h p) = "udp://"  <&& h &&& ":" <&& p
-
-instance Loggable [Uri] where
-    build = mconcat . intersperse (sbuild ", ") . map build
 
 uriParser :: Parser Uri
 uriParser = do

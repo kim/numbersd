@@ -19,6 +19,7 @@ module Properties.Series (
 import Blaze.ByteString.Builder
 import Control.Applicative                  ((<$>))
 import Data.Maybe
+import Numbers.Log
 import Numbers.Types
 import Numbers.Whisper.Series
 import Properties.Generators

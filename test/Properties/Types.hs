@@ -21,6 +21,7 @@ import Blaze.ByteString.Builder                    (toByteString)
 import Data.Maybe
 import Data.Monoid
 import Data.List                                   (union)
+import Numbers.Log
 import Numbers.Types
 import Properties.Generators
 import Test.Framework
