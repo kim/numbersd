@@ -15,11 +15,8 @@ module Numbers.Log (
     , sbuild
 
     , infoL
-    , infoL'
     , errorL
-    , errorL'
     , logL
-    , logL'
 
     , defaultLogger
     , newLogger
@@ -81,20 +78,11 @@ instance Loggable (V.Vector Double) where
 infoL :: Loggable a => a -> IO ()
 infoL = errorL
 
-infoL' :: String -> IO ()
-infoL' = infoL . sbuild
-
 errorL :: Loggable a => a -> IO ()
 errorL = logL defaultLogger
 
-errorL' :: String -> IO ()
-errorL' = errorL . sbuild
-
 logL :: Loggable a => Logger -> a -> IO ()
 logL logger s = loggerPutBuilder logger $ s &&> "\n"
-
-logL' :: Logger -> String -> IO ()
-logL' logger s = logL logger (sbuild s)
 
 defaultLogger :: Logger
 defaultLogger = unsafePerformIO $ mkLogger True stdout

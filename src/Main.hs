@@ -17,6 +17,7 @@ module Main where
 import Control.Concurrent.Async
 import Control.Concurrent.STM
 import Control.Monad
+import Data.ByteString.Char8 hiding (map)
 import Data.Maybe               (catMaybes)
 import Numbers.Conduit
 import Numbers.Config
@@ -29,20 +30,20 @@ main = withSocketsDo $ do
     conf@Config{..} <- parseConfig
 
     buf <- atomically $ newTBQueue _buffer
-    infoL' "Buffering..."
+    infoL ("Buffering..." :: ByteString)
 
     ls  <- mapM (asyncLink . (`sourceUri` buf)) _listeners
-    infoL' "Listeners started..."
+    infoL ("Listeners started..." :: ByteString)
 
     ss  <- sequence $
         catMaybes [sinkHttp conf, sinkLog _logEvents]
         ++ map (newSink (graphite _prefix)) _graphites
         ++ map (newSink broadcast) _broadcasts
         ++ map (newSink downstream) _downstreams
-    infoL' "Sinks started..."
+    infoL ("Sinks started..." :: ByteString)
 
     sto <- asyncLink $ runStore _percentiles _interval ss buf
-    infoL' "Store started..."
+    infoL ("Store started..." :: ByteString)
 
     void . waitAnyCancel $ sto:ls
 
