@@ -108,11 +108,6 @@ instance Monoid Key where
 instance Loggable Key where
     build (Key k) = build k
 
-instance Loggable [Key] where
-    build = mconcat . intersperse s . map build
-      where
-        s = sbuild ","
-
 instance ToJSON Key where
     toJSON (Key k) = toJSON k
 
@@ -150,16 +145,17 @@ data Metric = Counter !Double
             | Set     !(S.Set Double)
               deriving (Eq, Ord, Show)
 
+instance Loggable Metric where
+    build m = case m of
+                  Counter v -> v &&> "|c"
+                  Gauge   v -> v &&> "|g"
+                  Timer  vs -> g (&&> "|ms") $ V.toList vs
+                  Set    ss -> g (&&>  "|s") $ S.toAscList ss
+        where
+            g h = mconcat . intersperse (sbuild ":") . map h
+
 instance Loggable (Key, Metric) where
-    build (k, m) = k &&& s &&& f
-      where
-        s = sbuild ":"
-        f = case m of
-            Counter v -> v &&> "|c"
-            Gauge   v -> v &&> "|g"
-            Timer  vs -> g (&&> "|ms") $ V.toList vs
-            Set    ss -> g (&&>  "|s") $ S.toAscList ss
-        g h = mconcat . intersperse s . map h
+    build (k, m) = k &&& (sbuild ":") &&& build m
 
 lineParser :: Parser (Key, Metric)
 lineParser = do

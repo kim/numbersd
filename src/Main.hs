@@ -1,4 +1,4 @@
-{-# LANGUAGE NoOverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 -- |
 -- Module      : Main
