@@ -17,10 +17,11 @@
 
 module Numbers.Types
     ( -- * Exported Types
-      Time(..)
+      Dec(..)
     , Key(..)
     , Metric(..)
     , Point(..)
+    , Time(..)
     , Uri(..)
 
       -- * Functions
@@ -46,7 +47,6 @@ import           Data.Maybe
 import           Data.Monoid
 import           Data.Time.Clock.POSIX
 import           GHC.Generics
-import           Numbers.Log
 import           Statistics.Function        (sort)
 import           Statistics.Sample
 import           Text.Regex.PCRE            hiding (match)
@@ -56,11 +56,12 @@ import qualified Data.ByteString.Char8      as BS
 import qualified Data.Set                   as S
 import qualified Data.Vector                as V
 
+import           Numbers.Log
 
 newtype Time = Time Int
     deriving (Eq, Ord, Show, Enum, Num, Real, Integral, Generic)
 
-instance GBuild Time
+instance GBuild Time where gbuild (Time t) = gbuild t
 
 currentTime :: IO Time
 currentTime = (Time . truncate) `fmap` getPOSIXTime
@@ -108,7 +109,7 @@ instance Monoid Key where
     (Key a) `mappend` (Key b) = Key $ BS.concat [a, ".", b]
     mempty = Key mempty
 
-instance GBuild Key
+instance GBuild Key where gbuild (Key k) = gbuild k
 
 instance ToJSON Key where
     toJSON (Key k) = toJSON k
@@ -141,10 +142,30 @@ match :: Regex
       -> Maybe (BS.ByteString, BS.ByteString, BS.ByteString)
 match = matchM
 
-data Metric = Counter !Double
-            | Gauge   !Double
-            | Timer   !(V.Vector Double)
-            | Set     !(S.Set Double)
+newtype Dec = Dec { unDec :: Double }
+    deriving ( Enum
+             , Floating
+             , Fractional
+             , Generic
+             , Num
+             , Read
+             , Real
+             , RealFloat
+             , RealFrac
+             , Show
+             )
+
+-- necessary for Set
+instance Eq Dec  where (Dec a) == (Dec b) = a == b
+instance Ord Dec where compare (Dec a) (Dec b) = a `compare` b
+
+instance GBuild Dec where
+    gbuildbPrec _ (Dec d) = buildFFloat (Just 1) d
+
+data Metric = Counter !Dec
+            | Gauge   !Dec
+            | Timer   !(V.Vector Dec)
+            | Set     !(S.Set Dec)
     deriving (Eq, Ord, Show, Generic)
 
 instance GBuild Metric where
@@ -152,13 +173,14 @@ instance GBuild Metric where
                   Counter v -> v <&> b "|c"
                   Gauge   v -> v <&> b "|g"
                   Timer  vs -> g (<&> b "|ms") $ V.toList vs
-                  Set    ss -> g (<&> b "|s") $ S.toAscList ss
+                  Set    ss -> g (<&> b "|s")
+                               $ S.toAscList . S.map (toByteString . gbuild)
+                               $ ss
         where
             g h = mconcat . intersperse (gbuild ':') . map h
             b = BS.pack
 
-instance GBuild (Key, Metric) where
-    gbuild (k, m) = k <&> ':' <&> m
+instance GBuild (Key, Metric) where gbuild (k, m) = k <&> ':' <&> m
 
 lineParser :: Parser (Key, Metric)
 lineParser = do
@@ -169,9 +191,9 @@ lineParser = do
 metricsParser :: Parser [Metric]
 metricsParser = many1 $ do
     _ <- optional $ PC.char ':'
-    v <- value
+    v <- Dec `fmap` value
     t <- type'
-    r <- optional sample
+    r <- optional (Dec `fmap` sample)
     return $! case t of
         'g' -> Gauge   v
         'm' -> Timer   $ V.singleton v
@@ -201,10 +223,10 @@ aggregate a (Just b) = b `f` a
     f (Set     x) (Set     y) = Set     $ x `S.union` y
     f _           _           = b
 
-data Point = P !Key !Double
+data Point = P !Key !Dec
     deriving (Show, Generic)
 
-instance GBuild Point
+instance GBuild Point where gbuild (P k d) = k <&> ' ' <&> d
 
 calculate :: [Int] -> Int -> Key -> Metric -> [Point]
 calculate _  n k (Counter v) =
@@ -216,19 +238,19 @@ calculate _  _ k (Gauge v) =
 calculate _  _ k (Set ss) =
     [ P (Key "sets" <> k <> Key "count") (fromIntegral $ S.size ss) ]
 calculate qs _ k (Timer vs) = concatMap (quantile k xs) qs <>
-    [ P (Key "timers" <> k <> Key "std")   $ stdDev xs
+    [ P (Key "timers" <> k <> Key "std")   $ Dec . stdDev . V.map unDec $ xs
     , P (Key "timers" <> k <> Key "upper") $ V.last xs
     , P (Key "timers" <> k <> Key "lower") $ V.head xs
     , P (Key "timers" <> k <> Key "count") . fromIntegral $ V.length xs
     , P (Key "timers" <> k <> Key "sum")   $ V.sum xs
-    , P (Key "timers" <> k <> Key "mean")  $ mean xs
+    , P (Key "timers" <> k <> Key "mean")  $ Dec . mean . V.map unDec $ xs
     ]
   where
     xs = sort vs
 
-quantile :: Key -> V.Vector Double -> Int -> [Point]
+quantile :: Key -> V.Vector Dec -> Int -> [Point]
 quantile k xs q =
-    [ P (Key "timers" <> k <> a "mean_")  $ mean ys
+    [ P (Key "timers" <> k <> a "mean_")  $ Dec . mean . V.map unDec $ ys
     , P (Key "timers" <> k <> a "upper_") $ V.last ys
     , P (Key "timers" <> k <> a "sum_")   $ V.sum ys
     ]

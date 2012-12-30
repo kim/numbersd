@@ -15,11 +15,10 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Numbers.Config (
-    -- * Exported Types
+module Numbers.Config
+    ( -- * Exported Types
       Config(..)
-
-    -- * Functions
+      -- * Functions
     , parseConfig
     ) where
 
@@ -62,19 +61,21 @@ $(makeLens ''Config)
 
 instance GBuild Config where
     gbuild Config{..} = mconcat
-        [ gbuild . BS.pack $ "Configuration:"
-        , BS.pack "\n -> Listeners:      " <&> _listeners
-        , BS.pack "\n -> HTTP Port:      " <&> _httpPort
-        , BS.pack "\n -> Buffer Size:    " <&> _buffer
-        , BS.pack "\n -> Resolution:     " <&> _resolution
-        , BS.pack "\n -> Flush Interval: " <&> _interval
-        , BS.pack "\n -> Percentiles:    " <&> _percentiles
-        , BS.pack "\n -> Log Events:     " <&> _logEvents
-        , BS.pack "\n -> Prefix:         " <&> _prefix
-        , BS.pack "\n -> Graphites:      " <&> _graphites
-        , BS.pack "\n -> Broadcasts:     " <&> _broadcasts
-        , BS.pack "\n -> Downstreams:    " <&> _downstreams
+        [ gbuild . b $ "Configuration:"
+        , b "\n -> Listeners:      " <&> _listeners
+        , b "\n -> HTTP Port:      " <&> _httpPort
+        , b "\n -> Buffer Size:    " <&> _buffer
+        , b "\n -> Resolution:     " <&> _resolution
+        , b "\n -> Flush Interval: " <&> _interval
+        , b "\n -> Percentiles:    " <&> _percentiles
+        , b "\n -> Log Events:     " <&> _logEvents
+        , b "\n -> Prefix:         " <&> _prefix
+        , b "\n -> Graphites:      " <&> _graphites
+        , b "\n -> Broadcasts:     " <&> _broadcasts
+        , b "\n -> Downstreams:    " <&> _downstreams
         ]
+      where
+        b = BS.pack
     gbuild _ = mempty
 
 instance ToJSON Config where

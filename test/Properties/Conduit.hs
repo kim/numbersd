@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- |
@@ -17,19 +18,19 @@ module Properties.Conduit (
       conduitProperties
     ) where
 
-import Control.Applicative                  hiding (empty)
-import Data.Maybe
-import Numbers.Conduit
-import Numbers.Types
-import Properties.Generators
-import Test.Framework
-import Test.Framework.Providers.QuickCheck2
-import Test.QuickCheck
+import           Control.Applicative                  hiding (empty)
+import           Data.Maybe
+import           Numbers.Conduit
+import           Numbers.Types
+import           Properties.Generators
+import           Test.Framework
+import           Test.Framework.Providers.QuickCheck2
+import           Test.QuickCheck
 
-import qualified Data.Attoparsec.Char8 as PC
-import qualified Data.ByteString.Char8 as BS
-import qualified Data.Set              as S
-import qualified Data.Vector           as V
+import qualified Data.Attoparsec.Char8                as PC
+import qualified Data.ByteString.Char8                as BS
+import qualified Data.Set                             as S
+import qualified Data.Vector                          as V
 
 conduitProperties :: Test
 conduitProperties = testGroup "sinks"
@@ -122,10 +123,10 @@ downstreamP p = do
     im <- arbitrary `suchThat` p
     it <- arbitrary
     r  <- BS.intercalate "\n" <$> conduitResult [Flush ik im it] downstream
-    let (ok, om) = fromMaybe ("failed", Counter 0) $ decode lineParser r
+    let (ok, om) = fromMaybe (Key "failed", Counter 0) $ decode lineParser r
     return Downstream
         { inputDKey     = ik
-        , inputDMetric  = im
+        , inputDMetric  = loggedPrecision im
         , inputDEncoded = r
         , outputDKey    = ok
         , outputDMetric = om
@@ -161,7 +162,7 @@ instance Arbitrary Graphite where
             { inputGPrefix  = ip
             , inputGKey     = ik
             , inputGTime    = it
-            , inputGValue   = iv
+            , inputGValue   = unDec iv
             , outputGPrefix = op
             , outputGKey    = ok
             , outputGTime   = ot

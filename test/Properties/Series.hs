@@ -1,4 +1,6 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
 
 -- |
 -- Module      : Properties.Series
@@ -172,9 +174,9 @@ test_example_create = do
   assertEqual "values"
               [Nothing, Nothing, Nothing, Nothing, Just 3.4]
               (values series)
-  assertEqual "build"
+  assertEqual "gbuild"
               "49950,50000,10|None,None,None,None,3.4"
-              (toByteString $ build series)
+              (toByteString $ gbuild series)
 
 test_example_update :: Assertion
 test_example_update = do
@@ -186,9 +188,9 @@ test_example_update = do
   assertEqual "values"
               [Nothing, Nothing, Nothing, Just 3.4, Just 4.5]
               (values series)
-  assertEqual "build"
+  assertEqual "gbuild"
               "49960,50010,10|None,None,None,3.4,4.5"
-              (toByteString $ build series)
+              (toByteString $ gbuild series)
 
 test_example_fetch :: Assertion
 test_example_fetch = do
@@ -201,20 +203,20 @@ test_example_fetch = do
   assertEqual "values"
               [Nothing, Nothing, Just 3.4, Just 4.5, Nothing]
               (values series)
-  assertEqual "build"
+  assertEqual "gbuild"
               "49970,50020,10|None,None,3.4,4.5,None"
-              (toByteString $ build series)
+              (toByteString $ gbuild series)
 
 data SeriesCreate = SeriesCreate {
-    createInputRes :: Resolution
-  , createInputStep :: Step
-  , createInputTime :: Time
-  , createInputVal :: Double
+    createInputRes     :: Resolution
+  , createInputStep    :: Step
+  , createInputTime    :: Time
+  , createInputVal     :: Double
   , createOutputSeries :: Series
-  , createOutputRes :: Resolution
-  , createOutputStep :: Step
-  , createOutputStart :: Interval
-  , createOutputEnd :: Interval
+  , createOutputRes    :: Resolution
+  , createOutputStep   :: Step
+  , createOutputStart  :: Interval
+  , createOutputEnd    :: Interval
   , createOutputValues :: [Maybe Double]
 } deriving Show
 
@@ -239,19 +241,19 @@ instance Arbitrary SeriesCreate where
     }
 
 data SeriesUpdate = SeriesUpdate {
-    updateInputTime :: Time
-  , updateInputVal :: Double
-  , updateInputSeries :: Series
-  , updateInputRes :: Resolution
-  , updateInputStep :: Step
-  , updateInputStart :: Interval
-  , updateInputEnd :: Interval
-  , updateInputValues :: [Maybe Double]
+    updateInputTime    :: Time
+  , updateInputVal     :: Double
+  , updateInputSeries  :: Series
+  , updateInputRes     :: Resolution
+  , updateInputStep    :: Step
+  , updateInputStart   :: Interval
+  , updateInputEnd     :: Interval
+  , updateInputValues  :: [Maybe Double]
   , updateOutputSeries :: Series
-  , updateOutputRes :: Resolution
-  , updateOutputStep :: Step
-  , updateOutputStart :: Interval
-  , updateOutputEnd :: Interval
+  , updateOutputRes    :: Resolution
+  , updateOutputStep   :: Step
+  , updateOutputStart  :: Interval
+  , updateOutputEnd    :: Interval
   , updateOutputValues :: [Maybe Double]
 } deriving Show
 
@@ -291,19 +293,19 @@ instance Arbitrary SeriesUpdate where
     }
 
 data SeriesFetch = SeriesFetch {
-    fetchInputFrom :: Time
-  , fetchInputTo :: Time
-  , fetchInputSeries :: Series
-  , fetchInputRes :: Resolution
-  , fetchInputStep :: Step
-  , fetchInputStart :: Interval
-  , fetchInputEnd :: Interval
-  , fetchInputValues :: [Maybe Double]
+    fetchInputFrom    :: Time
+  , fetchInputTo      :: Time
+  , fetchInputSeries  :: Series
+  , fetchInputRes     :: Resolution
+  , fetchInputStep    :: Step
+  , fetchInputStart   :: Interval
+  , fetchInputEnd     :: Interval
+  , fetchInputValues  :: [Maybe Double]
   , fetchOutputSeries :: Series
-  , fetchOutputRes :: Resolution
-  , fetchOutputStep :: Step
-  , fetchOutputStart :: Interval
-  , fetchOutputEnd :: Interval
+  , fetchOutputRes    :: Resolution
+  , fetchOutputStep   :: Step
+  , fetchOutputStart  :: Interval
+  , fetchOutputEnd    :: Interval
   , fetchOutputValues :: [Maybe Double]
 } deriving Show
 

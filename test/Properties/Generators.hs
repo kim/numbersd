@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 -- |
 -- Module      : Properties.Generators
@@ -14,14 +15,14 @@
 
 module Properties.Generators where
 
-import Control.Applicative        ((<$>))
-import Data.Conduit        hiding (Flush)
-import Data.Foldable              (toList)
-import Data.Vector                (fromList)
-import Numbers.Conduit
-import Numbers.Types
-import Numeric                    (showFFloat)
-import Test.QuickCheck
+import           Control.Applicative   ((<$>))
+import           Data.Conduit          hiding (Flush)
+import           Data.Foldable         (toList)
+import           Data.Vector           (fromList)
+import           Test.QuickCheck
+
+import           Numbers.Conduit
+import           Numbers.Types
 
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Conduit.List     as CL
@@ -43,6 +44,11 @@ newtype UnsafeStr = UnsafeStr String
 
 instance Arbitrary UnsafeStr where
     arbitrary = UnsafeStr <$> (listOf1 $ elements [' '..'~'])
+
+instance Arbitrary Dec where
+    arbitrary = do
+        NonNegative n <- arbitrary
+        return $ Dec n
 
 instance Arbitrary Key where
     arbitrary = do
@@ -68,12 +74,10 @@ instance Arbitrary Point where
         NonNegative v <- arbitrary
         return $ P k v
 
-instance Arbitrary (S.Set Double) where
+instance Arbitrary (S.Set Dec) where
     arbitrary = do
         NonEmpty xs <- arbitrary
-        return . S.fromList $ map f xs
-      where
-        f x = read $ showFFloat (Just 1) (x :: Double) ""
+        return . S.fromList $ xs
 
 instance Arbitrary Event where
     arbitrary = do
@@ -118,3 +122,9 @@ kindaCloseM a b = case (a, b) of
       where
         i = toList x
         n = toList y
+
+loggedPrecision :: Metric -> Metric
+loggedPrecision (Set ss) = Set $ S.map red ss
+  where
+    red x = Dec ((realToFrac . (round :: Dec -> Int) $ x * 10) / 10)
+loggedPrecision x = x

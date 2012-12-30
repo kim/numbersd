@@ -104,7 +104,7 @@ pushEvents hs es = sequence_ [f h e | h <- hs, e <- es]
 graphite :: Monad m => String -> EventConduit m BS.ByteString
 graphite str = awaitForever $ \e -> case e of
     Aggregate p ts -> yield . toByteString . gbuild
-                      $ pref  <&> '.' <&> p  <&> ' ' <&> ts <&> nl
+                      $ pref  <&> '.' <&> p <&> ' ' <&> ts <&> nl
     _              -> return ()
   where
     pref = BS.pack str

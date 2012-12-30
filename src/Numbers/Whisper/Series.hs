@@ -56,7 +56,7 @@ type Step       = Int
 newtype Interval = I Int
     deriving (Eq, Ord, Show, Enum, Num, Real, Integral, Generic)
 
-instance GBuild Interval
+instance GBuild Interval where gbuild (I i) = gbuild i
 
 toInterval :: Step -> Time -> Interval
 toInterval s (Time t) = I $ t - (t `mod` s)

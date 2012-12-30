@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE OverloadedStrings    #-}
 
 -- |
 -- Module      : Properties.Types
@@ -16,21 +17,21 @@ module Properties.Types (
       typeProperties
     ) where
 
-import Prelude                              hiding (foldl)
-import Blaze.ByteString.Builder                    (toByteString)
-import Data.Maybe
-import Data.Monoid
-import Data.List                                   (union)
-import Numbers.Log
-import Numbers.Types
-import Properties.Generators
-import Test.Framework
-import Test.Framework.Providers.QuickCheck2
-import Test.QuickCheck
+import           Blaze.ByteString.Builder             (toByteString)
+import           Data.List                            (union)
+import           Data.Maybe
+import           Data.Monoid
+import           Numbers.Log
+import           Numbers.Types
+import           Prelude                              hiding (foldl)
+import           Properties.Generators
+import           Test.Framework
+import           Test.Framework.Providers.QuickCheck2
+import           Test.QuickCheck
 
-import qualified Data.ByteString.Char8 as BS
-import qualified Data.Set              as S
-import qualified Data.Vector           as V
+import qualified Data.ByteString.Char8                as BS
+import qualified Data.Set                             as S
+import qualified Data.Vector                          as V
 
 typeProperties :: Test
 typeProperties = testGroup "types"
@@ -87,7 +88,7 @@ prop_decode_key_strips_unsafe :: UnsafeStr -> Bool
 prop_decode_key_strips_unsafe (UnsafeStr s) =
     BS.all (\c -> c `elem` valid) k
   where
-    (Key k) = fromMaybe "failed!" . decode keyParser . BS.pack $ map f s
+    (Key k) = fromMaybe failedKey . decode keyParser . BS.pack $ map f s
     f ':' = '_'
     f c   = c
     valid = ['a'..'z'] ++ ['0'..'9'] ++ ['A'..'Z'] ++ ['_', '-', '.']
@@ -125,21 +126,21 @@ prop_aggregate_disimilar_metrics_keep_rvalue =
   where
     f = suchThat arbitrary (not . uncurry similarM)
 
-prop_aggregate_counters_are_summed :: Double -> Double -> Bool
+prop_aggregate_counters_are_summed :: Dec -> Dec -> Bool
 prop_aggregate_counters_are_summed x y =
     aggregate (Counter x) (Just $ Counter y) == Counter (x + y)
 
-prop_aggregate_gauges_keep_rvalue :: Double -> Double -> Bool
+prop_aggregate_gauges_keep_rvalue :: Dec -> Dec -> Bool
 prop_aggregate_gauges_keep_rvalue x y =
     aggregate (Gauge x) (Just $ Gauge y) == Gauge y
 
-prop_aggregate_timers_are_prepended :: [Double] -> [Double] -> Bool
+prop_aggregate_timers_are_prepended :: [Dec] -> [Dec] -> Bool
 prop_aggregate_timers_are_prepended xs ys =
     aggregate (f xs) (Just $ f ys) == f (ys ++ xs)
   where
     f = Timer . V.fromList
 
-prop_aggregate_sets_are_unioned :: [Double] -> [Double] -> Bool
+prop_aggregate_sets_are_unioned :: [Dec] -> [Dec] -> Bool
 prop_aggregate_sets_are_unioned xs ys =
     aggregate (f xs) (Just $ f ys) == f (xs `union` ys)
   where
@@ -171,7 +172,7 @@ instance Arbitrary EncodeUri where
                        , Tcp (BS.pack ih) ip
                        , Udp (BS.pack ih) ip
                        ]
-        let r  = toByteString $ build iu
+        let r  = toByteString $ gbuild iu
             ou = fromMaybe (File "failed!") $ decode uriParser r
         return EncodeUri
             { inputUUri     = iu
@@ -197,8 +198,8 @@ data EncodeKey = EncodeKey
 instance Arbitrary EncodeKey where
     arbitrary = do
         ik <- arbitrary
-        let r  = toByteString $ build ik
-            ok = fromMaybe "failed!" $ decode keyParser r
+        let r  = toByteString $ gbuild ik
+            ok = fromMaybe failedKey $ decode keyParser r
         return EncodeKey
             { inputKKey     = ik
             , inputKEncoded = r
@@ -217,12 +218,15 @@ instance Arbitrary EncodeMetric where
     arbitrary = do
         ik <- arbitrary
         im <- arbitrary
-        let s        = toByteString $ build (ik, im)
-            (ok, om) = fromMaybe ("failed!", Counter 0) $ decode lineParser s
+        let s        = toByteString $ gbuild (ik, im)
+            (ok, om) = fromMaybe (failedKey, Counter 0) $ decode lineParser s
         return EncodeMetric
             { inputMKey     = ik
-            , inputMMetric  = im
+            , inputMMetric  = loggedPrecision im
             , outputMStr    = s
             , outputMKey    = ok
             , outputMMetric = om
             }
+
+failedKey :: Key
+failedKey = Key "failed!"

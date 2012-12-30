@@ -46,7 +46,7 @@ newWhisper res step = do
 -- ^ Investigate implications of div absolute rounding torwards zero
 
 insert :: Time -> Point -> Whisper -> IO ()
-insert ts (P k v) Whisper{..} =
+insert ts (P k (Dec v)) Whisper{..} =
     M.update k (maybe (S.create _res _step ts v) (S.update ts v)) _db
 
 fetch :: Time -> Time -> Whisper -> Maybe [Key] -> IO [(Key, Series)]

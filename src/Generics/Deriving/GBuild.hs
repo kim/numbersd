@@ -21,6 +21,7 @@ module Generics.Deriving.GBuild
     , buildChar
     , buildParen
     , buildBS
+    , buildFFloat
     , (<&>)
     ) where
 
@@ -30,7 +31,6 @@ import Data.List
 import Data.Monoid
 import Data.Foldable                  (Foldable, toList)
 import GHC.Generics
-import Numeric                        (showFFloat)
 
 import qualified Data.ByteString as BS
 
@@ -138,27 +138,23 @@ gbuildbPrecdefault n = gbuildbPrec' Pref n . from
 instance GBuild Builder       where gbuildbPrec _ x = (x <>)
 instance GBuild BS.ByteString where gbuildbPrec _   = buildBS
 
-instance GBuild Char   where gbuildbPrec = buildShowsPrec
-instance GBuild Int    where gbuildbPrec = buildShowsPrec
-instance GBuild String where gbuildbPrec = buildShowsPrec
-instance GBuild Bool   where gbuildbPrec = buildShowsPrec
+instance GBuild Bool    where gbuildbPrec = buildShowsPrec
+instance GBuild Double  where gbuildbPrec = buildShowsPrec
+instance GBuild Float   where gbuildbPrec = buildShowsPrec
+instance GBuild Int     where gbuildbPrec = buildShowsPrec
+instance GBuild Integer where gbuildbPrec = buildShowsPrec
+
+instance GBuild Char   where gbuildbPrec _ = buildChar
+instance GBuild String where gbuildbPrec _ = buildString
 
 instance (GBuild a) => GBuild [a] where
-    gbuildbPrec _ l =   buildChar '['
+    gbuildbPrec _ l =  buildChar '['
                      . foldr (.) id
                         (intersperse (buildChar ',') (map (gbuildbPrec 0) l))
                      . buildChar ']'
 
 instance (Foldable f, GBuild a) => GBuild (f a) where
     gbuildbPrec n xs = gbuildbPrec n $ toList xs
-
--- FIXME: these are actually numbersd-specific, but would there be orphaned
-
-instance GBuild Double where
-    gbuildbPrec n d = gbuildbPrec n $ showFFloat (Just 2) d ""
-
-instance GBuild Float where
-    gbuildbPrec n f = gbuildbPrec n $ showFFloat (Just 2) f ""
 
 -- utilities
 
@@ -176,6 +172,17 @@ buildBS bs = (fromByteString bs <>)
 
 buildShowsPrec :: Show a => Int -> a -> BuildB
 buildShowsPrec n c = buildString . showsPrec n c $ ""
+
+-- FIXME: defaulting warning
+buildFFloat :: (GBuild a, RealFloat a) => Maybe Int -> a -> BuildB
+buildFFloat Nothing  a = (gbuild a <>)
+buildFFloat (Just x) a = (gbuild (round' a) <>)
+  where
+    round' y = (realToFrac . round $ y * exp') / exp'
+    exp'     = 10^x
+{-# SPECIALIZE buildFFloat ::
+        Maybe Int -> Float  -> BuildB,
+        Maybe Int -> Double -> BuildB #-}
 
 (<&>) :: (GBuild a, GBuild b) => a -> b -> Builder
 a <&> b = gbuild a <> gbuild b
