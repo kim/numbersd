@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveGeneric #-}
+
 -- |
 -- Module      : Numbers.Types
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
@@ -10,23 +12,24 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Numbers.Types (
-    -- * Exported Types
+module Numbers.Types
+    ( -- * Exported Types
       Time(..)
-    , Uri(..)
     , Key(..)
     , Metric(..)
     , Point(..)
+    , Uri(..)
 
-    -- * Functions
-    , lineParser
-    , keyParser
-    , uriParser
-    , decode
-    , currentTime
-    , zero
+      -- * Functions
     , aggregate
     , calculate
+    , currentTime
+    , decode
+    , keyParser
+    , lineParser
+    , nl
+    , uriParser
+    , zero
     ) where
 
 import Blaze.ByteString.Builder
@@ -38,8 +41,8 @@ import Data.Attoparsec.ByteString
 import Data.List                  hiding (sort)
 import Data.Maybe
 import Data.Monoid
-import Data.String
 import Data.Time.Clock.POSIX
+import GHC.Generics
 import Numbers.Log
 import Statistics.Function               (sort)
 import Statistics.Sample
@@ -53,35 +56,36 @@ import qualified Data.Vector           as V
 
 
 newtype Time = Time Int
-    deriving (Eq, Ord, Show, Enum, Num, Real, Integral)
+    deriving (Eq, Ord, Show, Enum, Num, Real, Integral, Generic)
 
-instance Loggable Time where
-    build (Time n) = build n
+instance GBuild Time
 
 currentTime :: IO Time
-currentTime = (Time . truncate) `liftM` getPOSIXTime
+currentTime = (Time . truncate) `fmap` getPOSIXTime
 
 data Uri = File { _path :: BS.ByteString }
          | Tcp  { _host :: BS.ByteString, _port :: Int }
          | Udp  { _host :: BS.ByteString, _port :: Int }
-           deriving (Eq, Show)
+  deriving (Eq, Show, Generic)
+
+instance GBuild Uri where
+    gbuild x@(File f)  = scheme x <&> f
+    gbuild x@(Tcp h p) = scheme x <&> h <&> ':' <&> p
+    gbuild x@(Udp h p) = scheme x <&> h <&> ':' <&> p
+
+scheme :: Uri -> BS.ByteString
+scheme (File _)  = "file://"
+scheme (Tcp _ _) = "tcp://"
+scheme (Udp _ _) = "udp://"
 
 instance Read Uri where
     readsPrec _ a = return (fromJust . decode uriParser $ BS.pack a, "")
 
-instance IsString Uri where
-    fromString = fromJust . decode uriParser . BS.pack
-
 instance ToJSON Uri where
-    toJSON = toJSON . TE.decodeUtf8 . toByteString . build
+    toJSON = toJSON . TE.decodeUtf8 . toByteString . gbuild
 
 decode :: Parser a -> BS.ByteString -> Maybe a
 decode p bstr = maybeResult $ feed (parse p bstr) BS.empty
-
-instance Loggable Uri where
-    build (File f)  = "file://" <&& f
-    build (Tcp h p) = "tcp://"  <&& h &&& ":" <&& p
-    build (Udp h p) = "udp://"  <&& h &&& ":" <&& p
 
 uriParser :: Parser Uri
 uriParser = do
@@ -96,17 +100,13 @@ uriParser = do
     port = PC.decimal :: Parser Int
 
 newtype Key = Key BS.ByteString
-    deriving (Eq, Ord, Show)
-
-instance IsString Key where
-    fromString = Key . BS.pack
+    deriving (Eq, Ord, Show, Generic)
 
 instance Monoid Key where
     (Key a) `mappend` (Key b) = Key $ BS.concat [a, ".", b]
     mempty = Key mempty
 
-instance Loggable Key where
-    build (Key k) = build k
+instance GBuild Key
 
 instance ToJSON Key where
     toJSON (Key k) = toJSON k
@@ -143,19 +143,20 @@ data Metric = Counter !Double
             | Gauge   !Double
             | Timer   !(V.Vector Double)
             | Set     !(S.Set Double)
-              deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic)
 
-instance Loggable Metric where
-    build m = case m of
-                  Counter v -> v &&> "|c"
-                  Gauge   v -> v &&> "|g"
-                  Timer  vs -> g (&&> "|ms") $ V.toList vs
-                  Set    ss -> g (&&>  "|s") $ S.toAscList ss
+instance GBuild Metric where
+    gbuild m = case m of
+                  Counter v -> v <&> b "|c"
+                  Gauge   v -> v <&> b "|g"
+                  Timer  vs -> g (<&> b "|ms") $ V.toList vs
+                  Set    ss -> g (<&> b "|s") $ S.toAscList ss
         where
-            g h = mconcat . intersperse (sbuild ":") . map h
+            g h = mconcat . intersperse (gbuild ':') . map h
+            b = BS.pack
 
-instance Loggable (Key, Metric) where
-    build (k, m) = k &&& (sbuild ":") &&& build m
+instance GBuild (Key, Metric) where
+    gbuild (k, m) = k <&> ':' <&> m
 
 lineParser :: Parser (Key, Metric)
 lineParser = do
@@ -199,38 +200,40 @@ aggregate a (Just b) = b `f` a
     f _           _           = b
 
 data Point = P !Key !Double
-    deriving (Show)
+    deriving (Show, Generic)
 
-instance Loggable Point where
-    build (P k v) = k &&> " " &&& v
+instance GBuild Point
 
 calculate :: [Int] -> Int -> Key -> Metric -> [Point]
 calculate _  n k (Counter v) =
-    [ P ("counters" <> k) (v / (fromIntegral n / 1000))
-    , P ("counters" <> k <> "count") v
+    [ P (Key "counters" <> k) (v / (fromIntegral n / 1000))
+    , P (Key "counters" <> k <> Key "count") v
     ]
 calculate _  _ k (Gauge v) =
-    [ P ("gauges" <> k) v ]
+    [ P (Key "gauges" <> k) v ]
 calculate _  _ k (Set ss) =
-    [ P ("sets" <> k <> "count") (fromIntegral $ S.size ss) ]
+    [ P (Key "sets" <> k <> Key "count") (fromIntegral $ S.size ss) ]
 calculate qs _ k (Timer vs) = concatMap (quantile k xs) qs <>
-    [ P ("timers" <> k <> "std")   $ stdDev xs
-    , P ("timers" <> k <> "upper") $ V.last xs
-    , P ("timers" <> k <> "lower") $ V.head xs
-    , P ("timers" <> k <> "count") . fromIntegral $ V.length xs
-    , P ("timers" <> k <> "sum")   $ V.sum xs
-    , P ("timers" <> k <> "mean")  $ mean xs
+    [ P (Key "timers" <> k <> Key "std")   $ stdDev xs
+    , P (Key "timers" <> k <> Key "upper") $ V.last xs
+    , P (Key "timers" <> k <> Key "lower") $ V.head xs
+    , P (Key "timers" <> k <> Key "count") . fromIntegral $ V.length xs
+    , P (Key "timers" <> k <> Key "sum")   $ V.sum xs
+    , P (Key "timers" <> k <> Key "mean")  $ mean xs
     ]
   where
     xs = sort vs
 
 quantile :: Key -> V.Vector Double -> Int -> [Point]
 quantile k xs q =
-    [ P ("timers" <> k <> a "mean_")  $ mean ys
-    , P ("timers" <> k <> a "upper_") $ V.last ys
-    , P ("timers" <> k <> a "sum_")   $ V.sum ys
+    [ P (Key "timers" <> k <> a "mean_")  $ mean ys
+    , P (Key "timers" <> k <> a "upper_") $ V.last ys
+    , P (Key "timers" <> k <> a "sum_")   $ V.sum ys
     ]
   where
     a  = Key . (`BS.append` BS.pack (show q))
     n  = round $ fromIntegral q / 100 * (fromIntegral $ V.length xs :: Double)
     ys = V.take n xs
+
+nl :: BS.ByteString
+nl = BS.pack "\n"

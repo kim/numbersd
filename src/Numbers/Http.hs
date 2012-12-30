@@ -1,4 +1,5 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 -- |
 -- Module      : Numbers.Http
@@ -25,13 +26,15 @@ import Network.Wai
 import Network.Wai.Application.Static
 import Network.Wai.Handler.Warp
 import Network.HTTP.Types
+
 import Numbers.Log
 import Numbers.Types
 import Numbers.Conduit
 import Numbers.Config
 
-import qualified Data.HashMap.Strict as H
-import qualified Numbers.Whisper     as W
+import qualified Data.ByteString.Char8 as BS
+import qualified Data.HashMap.Strict   as H
+import qualified Numbers.Whisper       as W
 
 data Format = Raw | Json
 
@@ -39,10 +42,14 @@ sinkHttp :: Config -> Maybe (IO EventSink)
 sinkHttp conf = (flip fmap) (_httpPort conf) $ \port -> do
     w <- W.newWhisper (_resolution conf) (_interval conf)
     async (run port $ serve conf w) >>= link
-    infoL $ "Serving /numbersd and /numbersd/render/<key> on http://0.0.0.0:" <&& port
+    upat port
     runSink . awaitForever $ \e -> case e of
         Aggregate p ts -> liftIO $ W.insert ts p w
         _              -> return ()
+  where
+    upat p = infoL
+        $ ("Serving /numbersd and /numbersd/render/<key> on http://0.0.0.0:" :: BS.ByteString)
+        <&> p
 
 -- | Serves whispers as if served by graphite http://graphite.wikidot.com/url-api-reference
 serve :: Config -> W.Whisper -> Application
@@ -94,7 +101,7 @@ renderSeries from to mks fmt whis = do
     return . success $ f ss
   where
     f = case fmt of
-        Raw  -> build . map (\(Key k, s) -> k &&> "," &&& s &&> "\n")
+        Raw  -> gbuild . map (\(Key k, s) -> k <&> ',' <&> s <&> nl)
         Json -> copyLazyByteString . encode
 
 renderConfig :: Format -> Config -> W.Whisper -> IO Response

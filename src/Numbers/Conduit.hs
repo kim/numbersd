@@ -1,4 +1,8 @@
-{-# LANGUAGE FlexibleContexts, RankNTypes, ImpredicativeTypes #-}
+{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE ImpredicativeTypes #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE RankNTypes         #-}
 
 -- |
 -- Module      : Numbers.Conduit
@@ -53,9 +57,11 @@ import Control.Monad.Trans.Control        (control)
 import Data.Conduit                hiding (Flush)
 import Data.Conduit.Binary
 import Data.String
+import GHC.Generics
+import System.IO
+
 import Numbers.Log
 import Numbers.Types
-import System.IO
 
 import qualified Data.ByteString.Char8     as BS
 import qualified Network.Socket            as S
@@ -69,7 +75,9 @@ data Event = Receive BS.ByteString
            | Parse Key Metric
            | Flush Key Metric Time
            | Aggregate Point Time
-             deriving (Show)
+  deriving (Show, Generic)
+
+instance GBuild Event
 
 type EventConduit m a = Conduit Event m a
 
@@ -95,7 +103,8 @@ pushEvents hs es = sequence_ [f h e | h <- hs, e <- es]
 
 graphite :: Monad m => String -> EventConduit m BS.ByteString
 graphite str = awaitForever $ \e -> case e of
-    Aggregate p ts -> yield . toByteString $ pref &&> "." &&& p &&> " " &&& ts &&> "\n"
+    Aggregate p ts -> yield . toByteString . gbuild
+                      $ pref  <&> '.' <&> p  <&> ' ' <&> ts <&> nl
     _              -> return ()
   where
     pref = BS.pack str
@@ -107,7 +116,7 @@ broadcast = awaitForever $ \e -> case e of
 
 downstream :: Monad m => EventConduit m BS.ByteString
 downstream = awaitForever $ \e -> case e of
-    Flush k m _ -> yield . toByteString $ build (k, m)
+    Flush k m _ -> yield . toByteString $ gbuild (k, m)
     _           -> return ()
 
 sourceUri :: Uri -> TBQueue BS.ByteString -> IO ()
@@ -135,12 +144,13 @@ sinkLog [] = Nothing
 sinkLog es = Just $ runSink f
   where
     f = awaitForever $ \e -> g $ case e of
-         Receive bs     -> ("receive",   "Receive: "   <&& bs)
-         Invalid bs     -> ("invalid",   "Invalid: "   <&& bs)
-         Parse k v      -> ("parse"  ,   "Parse: "     <&& (k, v))
-         Flush k v ts   -> ("flush"  ,   "Flush: "     <&& (k, v) &&> " " &&& ts)
-         Aggregate p ts -> ("aggregate", "Aggregate: " <&& p &&> " " &&& ts)
+         Receive bs     -> ("receive",   b "Receive: "   <&> bs)
+         Invalid bs     -> ("invalid",   b "Invalid: "   <&> bs)
+         Parse k v      -> ("parse"  ,   b "Parse: "     <&> (k, v))
+         Flush k v ts   -> ("flush"  ,   b "Flush: "     <&> (k, v) <&> ' ' <&> ts)
+         Aggregate p ts -> ("aggregate", b "Aggregate: " <&> p <&> ' ' <&> ts)
     g (k, v) = when (k `elem` es) (liftIO $ infoL v)
+    b = BS.pack
 
 host :: BS.ByteString -> U.HostPreference
 host = fromString . BS.unpack

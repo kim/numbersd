@@ -1,4 +1,6 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 -- |
 -- Module      : Numbers.Config
@@ -26,15 +28,17 @@ import Data.Lens.Common
 import Data.Lens.Template
 import Data.List                       (intersect)
 import Data.List.Split                 (splitOn)
-import Data.Monoid                     (mempty, mconcat)
+import Data.Monoid
 import Data.Version                    (showVersion)
+import GHC.Generics
+import System.Console.CmdArgs.Explicit
+import System.Environment
+import System.Exit
+
 import Numbers.Log
 import Numbers.Types
 import Numbers.Whisper.Series          (maxResolution)
 import Paths_numbersd                  (version)
-import System.Console.CmdArgs.Explicit
-import System.Environment
-import System.Exit
 
 import qualified Data.ByteString.Char8 as BS
 
@@ -51,25 +55,26 @@ data Config = Help | Version | Config
     , _broadcasts   :: [Uri]
     , _downstreams  :: [Uri]
     }
+    deriving (Eq, Show, Generic)
 
 $(makeLens ''Config)
 
-instance Loggable Config where
-    build Config{..} = mconcat
-        [ sbuild "Configuration:"
-        , "\n -> Listeners:      " <&& _listeners
-        , "\n -> HTTP Port:      " <&& _httpPort
-        , "\n -> Buffer Size:    " <&& _buffer
-        , "\n -> Resolution:     " <&& _resolution
-        , "\n -> Flush Interval: " <&& _interval
-        , "\n -> Percentiles:    " <&& _percentiles
-        , "\n -> Log Events:     " <&& (map sbuild _logEvents)
-        , "\n -> Prefix:         " <&& (sbuild _prefix)
-        , "\n -> Graphites:      " <&& _graphites
-        , "\n -> Broadcasts:     " <&& _broadcasts
-        , "\n -> Downstreams:    " <&& _downstreams
+instance GBuild Config where
+    gbuild Config{..} = mconcat
+        [ gbuild . BS.pack $ "Configuration:"
+        , BS.pack "\n -> Listeners:      " <&> _listeners
+        , BS.pack "\n -> HTTP Port:      " <&> _httpPort
+        , BS.pack "\n -> Buffer Size:    " <&> _buffer
+        , BS.pack "\n -> Resolution:     " <&> _resolution
+        , BS.pack "\n -> Flush Interval: " <&> _interval
+        , BS.pack "\n -> Percentiles:    " <&> _percentiles
+        , BS.pack "\n -> Log Events:     " <&> _logEvents
+        , BS.pack "\n -> Prefix:         " <&> _prefix
+        , BS.pack "\n -> Graphites:      " <&> _graphites
+        , BS.pack "\n -> Broadcasts:     " <&> _broadcasts
+        , BS.pack "\n -> Downstreams:    " <&> _downstreams
         ]
-    build _ = mempty
+    gbuild _ = mempty
 
 instance ToJSON Config where
     toJSON Config{..} = object
@@ -125,9 +130,9 @@ validate Config{..} = do
        "--listeners cannot be blank"
     check (not . null $ _listeners `intersect` sinks)
         "--listeners cannot contain any URI used by --{graphites,broadcasts,downstreams}"
-    check (not . null $ _listeners `intersect` ["file://stdout", "file://stderr"])
+    check (not . null $ _listeners `intersect` [File "stdout", File "stderr"])
         "--listeners cannot read from stdout or stderr"
-    check ("file://stdin" `elem` sinks)
+    check (File "stdin" `elem` sinks)
         "--{graphites,broadcasts,downstreams} cannot cannot write to stdin"
     check (_buffer < 1)
         "--buffer must be greater than 0"

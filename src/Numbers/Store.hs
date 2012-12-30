@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 -- |
 -- Module      : Numbers.Store
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
@@ -50,8 +52,8 @@ parse sinks m bstr = forM_ (filter (not . BS.null) $ BS.lines bstr) f
                 measure "bad_lines_seen" m
                 pushEvents sinks [Invalid b]
 
-measure :: Key -> M.Map Key Metric -> IO ()
-measure = flip insert (Counter 1)
+measure :: BS.ByteString -> M.Map Key Metric -> IO ()
+measure k m = insert (Key k) (Counter 1) m
 
 insert :: Key -> Metric -> M.Map Key Metric -> IO ()
 insert key val = M.update key (aggregate val)

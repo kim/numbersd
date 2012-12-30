@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveGeneric #-}
+
 -- |
 -- Module      : Numbers.Whisper.Series
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
@@ -38,7 +40,9 @@ import Data.Aeson
 import Data.List
 import Data.Maybe
 import Data.Monoid
-import Data.Tuple    (swap)
+import Data.Tuple           (swap)
+import GHC.Generics  hiding (from, to)
+
 import Numbers.Log
 import Numbers.Types
 
@@ -46,7 +50,9 @@ type Resolution = Int
 type Step       = Int
 
 newtype Interval = I Int
-    deriving (Eq, Ord, Show, Enum, Num, Real, Integral)
+    deriving (Eq, Ord, Show, Enum, Num, Real, Integral, Generic)
+
+instance GBuild Interval
 
 toInterval :: Step -> Time -> Interval
 toInterval s (Time t) = I $ t - (t `mod` s)
@@ -62,13 +68,26 @@ data Series = SS
     , step   :: Step
     , end    :: Interval
     , points :: [Maybe Double]
-    } deriving (Eq, Show)
+    }
+    deriving (Eq, Show, Generic)
 
 instance ToJSON (Key, Series) where
     toJSON (k, ss) = object
         [ "target"     .= k
         , "datapoints" .= datapoints ss
         ]
+
+instance GBuild Series where
+    gbuild s@SS{..} =
+        start s <&> ',' <&> end <&> ',' <&> step <&> '|' <&> values' (values s)
+
+        where
+            values' vs = mconcat $
+                intersperse (gbuild ',')
+                            (map (maybe (gbuild none) gbuild) $ vs)
+
+            none :: String
+            none = "None"
 
 maxResolution :: Resolution
 maxResolution = 5 * 60
@@ -91,22 +110,6 @@ timeline t r s =
 
 decrementInterval :: Step -> Interval -> Interval
 decrementInterval s (I t) = I (t - s)
-
-instance Loggable Interval where
-    build (I i) = build i
-
-instance Loggable Series where
-    build s@SS{..} = start s &&& "," <&& end  &&& "," <&& step &&& "|"
-                    <&& values' (values s)
-
-        where
-            values' vs = mconcat $
-                intersperse (sbuild ",")
-                            (map (maybe (sbuild noneStr) build) $ vs)
-
-
-noneStr :: String
-noneStr = "None"
 
 create :: Resolution -> Step -> Time -> Double -> Series
 create r s ts val
