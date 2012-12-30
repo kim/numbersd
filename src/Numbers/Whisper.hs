@@ -1,3 +1,5 @@
+{-# LANGUAGE RecordWildCards #-}
+
 -- |
 -- Module      : Numbers.Whisper
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
@@ -10,31 +12,31 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Numbers.Whisper (
-    -- * Opaque
+module Numbers.Whisper
+    ( -- * Opaque
       Whisper
     , newWhisper
 
-    -- * Operations
+      -- * Operations
     , insert
     , fetch
     , keys
     ) where
 
-import Control.Applicative             ((<$>))
-import Control.Arrow                   (second)
-import Control.Monad                   (liftM)
-import Data.Maybe
-import Numbers.Types
-import Numbers.Whisper.Series          (Resolution, Series, Step)
+import           Control.Applicative    ((<$>))
+import           Control.Arrow          (second)
+import           Control.Monad          (liftM)
+import           Data.Maybe
+import           Numbers.Types
+import           Numbers.Whisper.Series (Resolution, Series, Step)
 
 import qualified Numbers.Map            as M
 import qualified Numbers.Whisper.Series as S
 
 data Whisper = Whisper
-    { _res   :: Resolution
-    , _step  :: Step
-    , _db    :: M.Map Key Series
+    { _res  :: Resolution
+    , _step :: Step
+    , _db   :: M.Map Key Series
     }
 
 newWhisper :: Resolution -> Step -> IO Whisper

@@ -10,16 +10,16 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Numbers.Map.Internal (
-    -- * Exported Types
+module Numbers.Map.Internal
+    ( -- * Exported Types
       Entry(..)
     , Update(..)
 
-    -- * Opaque
+      -- * Opaque
     , Map
     , empty
 
-    -- * Functions
+      -- * Functions
     , toList
     , keys
     , lookup
@@ -27,20 +27,20 @@ module Numbers.Map.Internal (
     , deleteIf
     ) where
 
-import Prelude                  hiding (lookup)
-import Control.Applicative             ((<$>))
-import Control.Arrow                   (second)
-import Control.Monad
-import Control.Monad.IO.Class
-import Control.Concurrent.STM
-import Numbers.Types            hiding (P)
+import           Control.Applicative    ((<$>))
+import           Control.Arrow          (second)
+import           Control.Concurrent.STM
+import           Control.Monad
+import           Control.Monad.IO.Class
+import           Numbers.Types          hiding (P)
+import           Prelude                hiding (lookup)
 
-import qualified Data.Map as M
+import qualified Data.Map               as M
 
 data Entry v = Entry {
     create :: Time
   , modify :: Time
-  , value :: v
+  , value  :: v
 }
 
 type Map k v = TVar (M.Map k (Entry v))

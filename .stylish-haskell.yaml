@@ -1,0 +1,19 @@
+steps:
+  - imports:
+      align: file
+
+  - language_pragmas:
+      style: vertical
+      remove_redundant: true
+
+  # Align the types in record declarations
+  - records: {}
+
+  # Replace tabs by spaces. This is disabled by default.
+  - tabs:
+      spaces: 8
+
+  # Remove trailing whitespace
+  - trailing_whitespace: {}
+
+columns: 80

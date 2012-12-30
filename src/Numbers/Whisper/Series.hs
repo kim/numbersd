@@ -1,4 +1,8 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE RecordWildCards            #-}
 
 -- |
 -- Module      : Numbers.Whisper.Series
@@ -12,8 +16,8 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Numbers.Whisper.Series (
-    -- * Types
+module Numbers.Whisper.Series
+    ( -- * Types
       Resolution
     , Step
     , Time(..)
@@ -27,10 +31,10 @@ module Numbers.Whisper.Series (
     , values
     , datapoints
 
-    -- * Constants
+      -- * Constants
     , maxResolution
 
-    -- * Series operations
+      -- * Series operations
     , create
     , fetch
     , update
@@ -40,7 +44,7 @@ import Data.Aeson
 import Data.List
 import Data.Maybe
 import Data.Monoid
-import Data.Tuple           (swap)
+import Data.Tuple    (swap)
 import GHC.Generics  hiding (from, to)
 
 import Numbers.Log

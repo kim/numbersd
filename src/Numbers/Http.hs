@@ -1,5 +1,5 @@
-{-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 -- |
 -- Module      : Numbers.Http
@@ -13,28 +13,29 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Numbers.Http (
+module Numbers.Http
+    (
       sinkHttp
     ) where
 
-import Blaze.ByteString.Builder       hiding (flush)
-import Control.Monad.IO.Class
-import Control.Concurrent.Async
-import Data.Aeson
-import Data.Maybe
-import Network.Wai
-import Network.Wai.Application.Static
-import Network.Wai.Handler.Warp
-import Network.HTTP.Types
+import           Blaze.ByteString.Builder       hiding (flush)
+import           Control.Concurrent.Async
+import           Control.Monad.IO.Class
+import           Data.Aeson
+import           Data.Maybe
+import           Network.HTTP.Types
+import           Network.Wai
+import           Network.Wai.Application.Static
+import           Network.Wai.Handler.Warp
 
-import Numbers.Log
-import Numbers.Types
-import Numbers.Conduit
-import Numbers.Config
+import           Numbers.Conduit
+import           Numbers.Config
+import           Numbers.Log
+import           Numbers.Types
 
-import qualified Data.ByteString.Char8 as BS
-import qualified Data.HashMap.Strict   as H
-import qualified Numbers.Whisper       as W
+import qualified Data.ByteString.Char8          as BS
+import qualified Data.HashMap.Strict            as H
+import qualified Numbers.Whisper                as W
 
 data Format = Raw | Json
 

@@ -16,59 +16,59 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Numbers.Conduit (
-    -- * Exported Types
+module Numbers.Conduit
+    ( -- * Exported Types
       Event(..)
     , EventConduit
 
-    -- * Opaque
+      -- * Opaque
     , EventSink
     , newSink
     , runSink
     , pushEvents
 
-    -- * Conduits
+      -- * Conduits
     , graphite
     , broadcast
     , downstream
 
-    -- * Sources
+      -- * Sources
     , sourceUri
 
-    -- * Sinks
+      -- * Sinks
     , sinkUri
     , sinkQueue
     , sinkLog
 
-    -- * Re-exports
+      -- * Re-exports
     , awaitForever
     , yield
     , (=$)
     , S.withSocketsDo
     ) where
 
-import Blaze.ByteString.Builder           (toByteString)
-import Control.Concurrent.Async
-import Control.Concurrent.STM
-import Control.Exception
-import Control.Monad
-import Control.Monad.IO.Class
-import Control.Monad.Trans.Control        (control)
-import Data.Conduit                hiding (Flush)
-import Data.Conduit.Binary
-import Data.String
-import GHC.Generics
-import System.IO
+import           Blaze.ByteString.Builder    (toByteString)
+import           Control.Concurrent.Async
+import           Control.Concurrent.STM
+import           Control.Exception
+import           Control.Monad
+import           Control.Monad.IO.Class
+import           Control.Monad.Trans.Control (control)
+import           Data.Conduit                hiding (Flush)
+import           Data.Conduit.Binary
+import           Data.String
+import           GHC.Generics
+import           System.IO
 
-import Numbers.Log
-import Numbers.Types
+import           Numbers.Log
+import           Numbers.Types
 
-import qualified Data.ByteString.Char8     as BS
-import qualified Network.Socket            as S
-import qualified Network.Socket.ByteString as SS
-import qualified Data.Conduit.List         as CL
-import qualified Data.Conduit.Network      as T
-import qualified Data.Conduit.Network.UDP  as U
+import qualified Data.ByteString.Char8       as BS
+import qualified Data.Conduit.List           as CL
+import qualified Data.Conduit.Network        as T
+import qualified Data.Conduit.Network.UDP    as U
+import qualified Network.Socket              as S
+import qualified Network.Socket.ByteString   as SS
 
 data Event = Receive BS.ByteString
            | Invalid BS.ByteString

@@ -25,11 +25,6 @@ executable numbersd
   hs-source-dirs:     src
 
   default-language:   Haskell2010
-  default-extensions: FlexibleInstances
-                    , GeneralizedNewtypeDeriving
-                    , OverloadedStrings
-                    , RecordWildCards
-                    , TypeSynonymInstances
 
   ghc-options:       -Wall -O2 -rtsopts -threaded
   ghc-prof-options:  -Wall -prof -fprof-auto -auto-all -with-rtsopts=-hc
@@ -56,7 +51,6 @@ executable numbersd
                     , statistics
                     , stm
                     , stm-conduit
-                    , text
                     , time
                     , transformers
                     , unordered-containers

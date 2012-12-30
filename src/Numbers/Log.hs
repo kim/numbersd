@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 -- |
 -- Module      : Numbers.Log
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
@@ -24,7 +22,6 @@ module Numbers.Log
     , newLogger
     ) where
 
-import Data.ByteString.Char8
 import Generics.Deriving.GBuild
 import System.IO
 import System.IO.Unsafe
@@ -38,7 +35,7 @@ errorL :: GBuild a => a -> IO ()
 errorL = logL defaultLogger
 
 logL :: GBuild a => Logger -> a -> IO ()
-logL logger s = loggerPutBuilder logger . gbuild $ s <&> ("\n" :: ByteString)
+logL logger s = loggerPutBuilder logger . gbuild $ s <&> "\n"
 
 defaultLogger :: Logger
 defaultLogger = unsafePerformIO $ mkLogger True stdout

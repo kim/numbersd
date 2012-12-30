@@ -12,18 +12,19 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Numbers.Store (
+module Numbers.Store
+    (
       runStore
     ) where
 
-import Control.Monad
-import Control.Monad.IO.Class
-import Control.Concurrent.STM
-import Numbers.Conduit
-import Numbers.Types
+import           Control.Concurrent.STM
+import           Control.Monad
+import           Control.Monad.IO.Class
+import           Numbers.Conduit
+import           Numbers.Types
 
-import qualified Data.ByteString.Char8 as BS
-import qualified Numbers.Map           as M
+import qualified Data.ByteString.Char8  as BS
+import qualified Numbers.Map            as M
 
 runStore :: [Int]
          -> Int

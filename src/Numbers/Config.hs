@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE TemplateHaskell   #-}
 
 -- |
@@ -22,38 +23,38 @@ module Numbers.Config (
     , parseConfig
     ) where
 
-import Control.Monad
-import Data.Aeson
-import Data.Lens.Common
-import Data.Lens.Template
-import Data.List                       (intersect)
-import Data.List.Split                 (splitOn)
-import Data.Monoid
-import Data.Version                    (showVersion)
-import GHC.Generics
-import System.Console.CmdArgs.Explicit
-import System.Environment
-import System.Exit
+import           Control.Monad
+import           Data.Aeson
+import           Data.Lens.Common
+import           Data.Lens.Template
+import           Data.List                       (intersect)
+import           Data.List.Split                 (splitOn)
+import           Data.Monoid
+import           Data.Version                    (showVersion)
+import           GHC.Generics
+import           System.Console.CmdArgs.Explicit
+import           System.Environment
+import           System.Exit
 
-import Numbers.Log
-import Numbers.Types
-import Numbers.Whisper.Series          (maxResolution)
-import Paths_numbersd                  (version)
+import           Numbers.Log
+import           Numbers.Types
+import           Numbers.Whisper.Series          (maxResolution)
+import           Paths_numbersd                  (version)
 
-import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.Char8           as BS
 
 data Config = Help | Version | Config
-    { _listeners    :: [Uri]
-    , _httpPort     :: Maybe Int
-    , _buffer       :: Int
-    , _resolution   :: Int
-    , _interval     :: Int
-    , _percentiles  :: [Int]
-    , _logEvents    :: [String]
-    , _prefix       :: String
-    , _graphites    :: [Uri]
-    , _broadcasts   :: [Uri]
-    , _downstreams  :: [Uri]
+    { _listeners   :: [Uri]
+    , _httpPort    :: Maybe Int
+    , _buffer      :: Int
+    , _resolution  :: Int
+    , _interval    :: Int
+    , _percentiles :: [Int]
+    , _logEvents   :: [String]
+    , _prefix      :: String
+    , _graphites   :: [Uri]
+    , _broadcasts  :: [Uri]
+    , _downstreams :: [Uri]
     }
     deriving (Eq, Show, Generic)
 

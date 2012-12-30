@@ -1,4 +1,7 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings          #-}
 
 -- |
 -- Module      : Numbers.Types
@@ -32,27 +35,26 @@ module Numbers.Types
     , zero
     ) where
 
-import Blaze.ByteString.Builder
-import Control.Arrow                     ((***), first)
-import Control.Applicative        hiding (empty)
-import Control.Monad
-import Data.Aeson                        (ToJSON(..))
-import Data.Attoparsec.ByteString
-import Data.List                  hiding (sort)
-import Data.Maybe
-import Data.Monoid
-import Data.Time.Clock.POSIX
-import GHC.Generics
-import Numbers.Log
-import Statistics.Function               (sort)
-import Statistics.Sample
-import Text.Regex.PCRE            hiding (match)
+import           Blaze.ByteString.Builder
+import           Control.Applicative        hiding (empty)
+import           Control.Arrow              (first, (***))
+import           Control.Monad
+import           Data.Aeson                 (ToJSON (..))
+import           Data.Attoparsec.ByteString
+import           Data.List                  hiding (sort)
+import           Data.Maybe
+import           Data.Monoid
+import           Data.Time.Clock.POSIX
+import           GHC.Generics
+import           Numbers.Log
+import           Statistics.Function        (sort)
+import           Statistics.Sample
+import           Text.Regex.PCRE            hiding (match)
 
-import qualified Data.Attoparsec.Char8 as PC
-import qualified Data.ByteString.Char8 as BS
-import qualified Data.Set              as S
-import qualified Data.Text.Encoding    as TE
-import qualified Data.Vector           as V
+import qualified Data.Attoparsec.Char8      as PC
+import qualified Data.ByteString.Char8      as BS
+import qualified Data.Set                   as S
+import qualified Data.Vector                as V
 
 
 newtype Time = Time Int
@@ -82,7 +84,7 @@ instance Read Uri where
     readsPrec _ a = return (fromJust . decode uriParser $ BS.pack a, "")
 
 instance ToJSON Uri where
-    toJSON = toJSON . TE.decodeUtf8 . toByteString . gbuild
+    toJSON = toJSON . toByteString . gbuild
 
 decode :: Parser a -> BS.ByteString -> Maybe a
 decode p bstr = maybeResult $ feed (parse p bstr) BS.empty

@@ -1,3 +1,5 @@
+{-# LANGUAGE RecordWildCards #-}
+
 -- |
 -- Module      : Numbers.Map
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
@@ -10,29 +12,29 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Numbers.Map (
-    -- * Exported Types
+module Numbers.Map
+    ( -- * Exported Types
       Policy(..)
 
-    -- * Opaque
+      -- * Opaque
     , Map
     , empty
 
-    -- * Functions
+      -- * Functions
     , toList
     , keys
     , lookup
     , update
     ) where
 
-import Prelude                  hiding (lookup)
-import Control.Monad
-import Control.Monad.IO.Class
-import Control.Concurrent
-import Control.Concurrent.Async hiding (wait)
-import Numbers.Types            hiding (P)
+import           Control.Concurrent
+import           Control.Concurrent.Async hiding (wait)
+import           Control.Monad
+import           Control.Monad.IO.Class
+import           Numbers.Types            hiding (P)
+import           Prelude                  hiding (lookup)
 
-import qualified Numbers.Map.Internal as I
+import qualified Numbers.Map.Internal     as I
 
 type Handler k v = k -> v -> Time -> IO ()
 
