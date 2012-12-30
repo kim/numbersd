@@ -159,8 +159,8 @@ newtype Dec = Dec { unDec :: Double }
 instance Eq Dec  where (Dec a) == (Dec b) = a == b
 instance Ord Dec where compare (Dec a) (Dec b) = a `compare` b
 
-instance GBuild Dec where
-    gbuildbPrec _ (Dec d) = buildFFloat (Just 1) d
+-- show only one digit after the decimal point
+instance GBuild Dec where gbuildbPrec _ (Dec d) = buildFFloat (Just 1) d
 
 data Metric = Counter !Dec
             | Gauge   !Dec
@@ -174,7 +174,7 @@ instance GBuild Metric where
                   Gauge   v -> v <&> b "|g"
                   Timer  vs -> g (<&> b "|ms") $ V.toList vs
                   Set    ss -> g (<&> b "|s")
-                               $ S.toAscList . S.map (toByteString . gbuild)
+                               $ S.toAscList . S.map (toByteString . gbuild) -- preserve Set-ness
                                $ ss
         where
             g h = mconcat . intersperse (gbuild ':') . map h
@@ -260,4 +260,4 @@ quantile k xs q =
     ys = V.take n xs
 
 nl :: BS.ByteString
-nl = BS.pack "\n"
+nl = "\n"
